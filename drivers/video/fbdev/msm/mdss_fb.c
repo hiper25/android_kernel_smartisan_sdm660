@@ -55,6 +55,9 @@
 #include "mdss_debug.h"
 #include "mdss_smmu.h"
 #include "mdss_mdp.h"
+#ifdef CONFIG_VENDOR_SMARTISAN
+#include "mdss_dsi.h"
+#endif
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -91,6 +94,10 @@ static u32 mdss_fb_pseudo_palette[16] = {
 	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
 	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
 };
+
+#ifdef CONFIG_VENDOR_SMARTISAN
+extern int lcd_id;
+#endif
 
 static struct msm_mdp_interface *mdp_instance;
 
@@ -839,6 +846,56 @@ static ssize_t mdss_fb_get_dfps_mode(struct device *dev,
 	return ret;
 }
 
+#ifdef CONFIG_VENDOR_SMARTISAN
+static ssize_t mdss_fb_get_panelid(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = scnprintf(buf, PAGE_SIZE, "%d", lcd_id);
+	return ret;
+}
+
+static ssize_t mdss_fb_get_panel_regid(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int ret;
+	char rx_buf;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	struct mdss_panel_data *pdata;
+	char panel1 = 0xda;
+	char panel2 = 0x00;
+	int len = 1;
+
+
+	pdata = dev_get_platdata(&mfd->pdev->dev);
+	if (!pdata) {
+		pr_err("no panel connected!\n");
+		return ret;
+	}
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata, panel_data);
+
+	mdss_dsi_panel_cmd_read(ctrl_pdata, panel1, panel2, NULL, &rx_buf, len);
+	if(rx_buf == 0x80)
+		rx_buf = 11;
+	else if(rx_buf == 0x81)
+		rx_buf = 12;
+	else if(rx_buf == 0x82)
+		rx_buf = 13;
+
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", rx_buf);
+
+	return ret;
+}
+#endif
+
 static ssize_t mdss_fb_change_persist_mode(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t len)
 {
@@ -934,6 +991,10 @@ static DEVICE_ATTR(measured_fps, S_IRUGO | S_IWUSR | S_IWGRP,
 static DEVICE_ATTR(msm_fb_persist_mode, S_IRUGO | S_IWUSR,
 	mdss_fb_get_persist_mode, mdss_fb_change_persist_mode);
 static DEVICE_ATTR(idle_power_collapse, S_IRUGO, mdss_fb_idle_pc_notify, NULL);
+#ifdef CONFIG_VENDOR_SMARTISAN
+static DEVICE_ATTR(show_panel_id, S_IRUGO , mdss_fb_get_panelid, NULL);
+static DEVICE_ATTR(show_panel_regid, S_IRUGO , mdss_fb_get_panel_regid, NULL);
+#endif
 
 static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
@@ -949,6 +1010,10 @@ static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_measured_fps.attr,
 	&dev_attr_msm_fb_persist_mode.attr,
 	&dev_attr_idle_power_collapse.attr,
+#ifdef CONFIG_VENDOR_SMARTISAN
+	&dev_attr_show_panel_id.attr,
+	&dev_attr_show_panel_regid.attr,
+#endif
 	NULL,
 };
 
@@ -1857,6 +1922,10 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 {
 	int ret = 0;
 	int cur_power_state, current_bl;
+#ifdef CONFIG_VENDOR_SMARTISAN
+	struct fb_event event;
+	event.info = mfd->fbi;
+#endif
 
 	if (!mfd)
 		return -EINVAL;
@@ -1873,6 +1942,13 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 		pr_debug("No change in power state\n");
 		return 0;
 	}
+
+#ifdef CONFIG_VENDOR_SMARTISAN
+	if (mfd->index == 0) {
+		printk("call LCD_EVENT_OFF by fb\n");
+		fb_notifier_call_chain(LCD_EVENT_OFF, &event);
+	}
+#endif
 
 	mutex_lock(&mfd->update.lock);
 	mfd->update.type = NOTIFY_TYPE_SUSPEND;
@@ -1913,6 +1989,10 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 {
 	int ret = 0;
 	int cur_power_state;
+#ifdef CONFIG_VENDOR_SMARTISAN
+	struct fb_event event;
+	event.info = mfd->fbi;
+#endif
 
 	if (!mfd)
 		return -EINVAL;
@@ -1993,6 +2073,12 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 		mutex_unlock(&mfd->bl_lock);
 	}
 
+#ifdef CONFIG_VENDOR_SMARTISAN
+	if (mfd->index == 0) {
+		printk("call LCD_EVENT_ON by fb\n");
+		fb_notifier_call_chain(LCD_EVENT_ON, &event);
+	}
+#endif
 error:
 	return ret;
 }
