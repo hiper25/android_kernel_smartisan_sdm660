@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+	/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -415,5 +415,9 @@ static inline bool ufs_qcom_cap_svs2(struct ufs_qcom_host *host)
 {
 	return !!(host->caps & UFS_QCOM_CAP_SVS2);
 }
+
+#ifdef CONFIG_VENDOR_SMARTISAN
+int ufs_qcom_set_disbale_lpm(struct ufs_hba *hba, bool value);
+#endif
 
 #endif /* UFS_QCOM_H_ */
