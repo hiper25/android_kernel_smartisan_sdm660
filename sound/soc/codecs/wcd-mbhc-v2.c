@@ -1405,7 +1405,6 @@ correct_plug_type:
 				}
 #endif
 				continue;
-#endif
 			} else if (ret > 0) {
 				pt_gnd_mic_swap_cnt++;
 				no_gnd_mic_swap_cnt = 0;
