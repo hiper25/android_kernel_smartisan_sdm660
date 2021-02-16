@@ -13,6 +13,8 @@
 
 /dts-v1/;
 
+#define CONFIG_VENDOR_SMARTISAN
+
 #include "sdm660.dtsi"
 #include "sdm660-qrd.dtsi"
 #include "oscar-audio.dtsi"
