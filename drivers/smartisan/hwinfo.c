@@ -654,9 +654,9 @@ static int __init hwinfo_init(void)
     hwinfo_value = *(unsigned int *)ptr_hv;
     lpddr_mid_name = foreach_lpddr_table(hwinfo_value & 0xFF);
     WARN((lpddr_mid_name==NULL), "hwinfo:cannot recognize lpddr");
-    if (lpddr_mid_name==NULL)
+    if (lpddr_mid_name==NULL) {
         lpddr_mid_name = "Unknown";
-
+	}
 	sprintf(hwinfo[lpddr_manufacturer].hwinfo_buf,"%s", lpddr_mid_name);
 
 	/*cpu_type*/
