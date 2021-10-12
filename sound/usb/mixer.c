@@ -770,7 +770,7 @@ static int __check_input_term(struct mixer_build *state, int id,
 				struct uac3_input_terminal_descriptor *d = p1;
 
 				err = __check_input_term(state,
-							d->bCSourceID, term);
+							 d->bCSourceID, term);
 				if (err < 0)
 					return err;
 
@@ -828,7 +828,7 @@ static int __check_input_term(struct mixer_build *state, int id,
 				struct uac_selector_unit_descriptor *d = p1;
 				/* call recursively to retrieve channel info */
 				err = __check_input_term(state,
-							d->baSourceID[0], term);
+							 d->baSourceID[0], term);
 				if (err < 0)
 					return err;
 				/* virtual type */
@@ -1126,7 +1126,8 @@ static int get_min_max_with_quirks(struct usb_mixer_elem_info *cval,
 		if (cval->min + cval->res < cval->max) {
 			int last_valid_res = cval->res;
 			int saved, test, check;
-			get_cur_mix_raw(cval, minchn, &saved);
+			if (get_cur_mix_raw(cval, minchn, &saved) < 0)
+				goto no_res_check;
 			for (;;) {
 				test = saved;
 				if (test < cval->max)
@@ -1146,6 +1147,7 @@ static int get_min_max_with_quirks(struct usb_mixer_elem_info *cval,
 			snd_usb_set_cur_mix_value(cval, minchn, 0, saved);
 		}
 
+no_res_check:
 		cval->initialized = 1;
 	}
 
@@ -1904,9 +1906,9 @@ static int parse_audio_mixer_unit(struct mixer_build *state, int unitid,
 		   (badd_baiof_mu_desc.wClusterDescrID == CLUSTER_ID_MONO) ?
 		    NUM_CHANNELS_MONO : NUM_CHANNELS_STEREO;
 	} else {
-		if (desc->bLength < 11 || desc->bLength < sizeof(*desc) + desc->bNrInPins ||
-		!(input_pins = desc->bNrInPins) ||
-		!(num_outs = uac_mixer_unit_bNrChannels(desc))) {
+		if (desc->bLength < 11 || !(input_pins = desc->bNrInPins) ||
+		    desc->bLength < sizeof(*desc) + desc->bNrInPins ||
+		    !(num_outs = uac_mixer_unit_bNrChannels(desc))) {
 			usb_audio_err(state->chip,
 				      "invalid MIXER UNIT descriptor %d\n",
 				      unitid);
